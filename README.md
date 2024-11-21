@@ -12,3 +12,5 @@ Expect errors if you use it at this stage.
 
 Also, saving the bsky session is not implemented yet.
 If you use this you may expect rate-limiting (30/5m, 300/d)
+
+PULL REQUESTS WELCOME!
