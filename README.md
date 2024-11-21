@@ -13,4 +13,15 @@ Expect errors if you use it at this stage.
 Also, saving the bsky session is not implemented yet.
 If you use this you may expect rate-limiting (30/5m, 300/d)
 
-PULL REQUESTS WELCOME!
+
+______
+
+Just threw in dat backup-script.
+
+It takes the Name of the List you want to backup and a filename and will create
+a textfile containing all the did's that list has.
+
+Oh, dont forget to set the vars in the scripts according to your needs. Did
+i mention this code is messy as fuck? Don't blame me for errors - i know and
+i will clean up, but not today.
+
