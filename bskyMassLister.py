@@ -59,7 +59,7 @@ def main():
                 if entry.startswith("@"):
                     entry = entry[1::]
                 if not entry.startswith("did:"):
-                    entry = get_user_did(entry)
+                    entry = get_user_did(entry, resolver)
                 add_user_to_list(entry, list_uri, client)
 
 
