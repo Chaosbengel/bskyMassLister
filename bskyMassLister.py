@@ -51,6 +51,7 @@ def main():
     list_uri = get_list_uri(TARGET_LIST, client)
     with open(args.filename, 'r') as f:
         for entry in f:
+            entry = entry.rstrip()
             add_user_to_list(entry, list_uri, client)
 
 
