@@ -8,8 +8,8 @@ TARGET_LIST = "Hatespam"
 import os
 
 from argparse import ArgumentParser
-from atproto import Client, models
-from atproto_identity.resolver import IdResolver
+from atproto import Client, models, IdResolver
+
 
 
 BSKY_APP_PW = os.environ.get("BSKY_APP_PASS")
@@ -19,16 +19,18 @@ class ListNotFoundException(Exception):
         super().__init__(message)
 
 
-def add_user_to_list(handle: str, list_uri: str, client: Client):
-    user_did = IdResolver().handle.resolve(handle)
+def add_user_to_list(did: str, list_uri: str, client: Client):
     client.app.bsky.graph.listitem.create(
         BSKY_HANDLE,
         models.AppBskyGraphListitem.Record(
             list=list_uri,
-            subject=user_did,
+            subject=did,
             created_at=client.get_current_time_iso()
         )
     )
+
+def get_user_did(handle: str, resolver: IdResolver):
+    return resolver.handle.resolve(handle)
 
 def get_list_uri(list_name: str, client: Client) -> str:
     list_uri = None
@@ -47,12 +49,17 @@ def main():
     argparser.add_argument("filename")
     args = argparser.parse_args()
     client = Client()
+    resolver = IdResolver()
     client.login(BSKY_HANDLE, BSKY_APP_PW)
     list_uri = get_list_uri(TARGET_LIST, client)
     with open(args.filename, 'r') as f:
         for entry in f:
             if entry.strip():
                 entry = entry.rstrip()
+                if entry.startswith("@"):
+                    entry = entry[1::]
+                if not entry.startswith("did:"):
+                    entry = get_user_did(entry)
                 add_user_to_list(entry, list_uri, client)
 
 
