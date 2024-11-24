@@ -110,6 +110,17 @@ class BskyListTool:
                 if cursor is None:
                     break
 
+    def get_followers(self, handle: str, file: Union[Path, str]):
+        cursor = None
+        with open(file, 'w', encoding='utf-8') as f:
+            while True:
+                followers = self.client.get_followers(actor=handle, limit=100, cursor=cursor)
+                cursor = followers.cursor
+                for follower in followers.followers:
+                    f.write(follower.did + '\n')
+                if cursor is None:
+                    break
+
 
     def _get_list_uri(self, listname: str, owner: str) -> str:
         response = self.client.app.bsky.graph.get_lists(
@@ -141,6 +152,9 @@ if __name__ == "__main__":
     download_p.add_argument('owner')
     download_p.add_argument('list_name')
     download_p.add_argument('file')
+    follower_p = list_subp.add_parser('followers')
+    follower_p.add_argument('handle')
+    follower_p.add_argument('file')
     args = p.parse_args()
     with BskyListTool(cred_file='./config', token_file='./.bsky.token') as tool:
         match args.main_menu:
@@ -150,3 +164,5 @@ if __name__ == "__main__":
                         tool.add_file_to_list(args.target_list_name, args.file)
                     case 'download':
                         tool.backup_list(args.list_name, args.owner, args.file)
+                    case 'followers':
+                        tool.get_followers(args.handle, args.file)
