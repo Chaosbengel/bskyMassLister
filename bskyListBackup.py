@@ -30,7 +30,7 @@ def backup_list(list_uri: str, file: str, client: Client):
     with open(file, 'w', encoding='utf-8') as f:
         while True:
             bskylist = client.app.bsky.graph.get_list(
-                models.AppBskyGraphGetList.Params(list=list_uri)
+                models.AppBskyGraphGetList.Params(list=list_uri, limit=100, cursor=cursor)
             )
             cursor = bskylist.cursor
             for entry in bskylist.items:
