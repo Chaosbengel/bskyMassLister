@@ -14,9 +14,9 @@ class ListNotFoundException(Exception):
     def __init__(self, message):
         super().__init__(message)
 
-def get_list_uri(list_name: str, client: Client) -> str:
+def get_list_uri(list_name: str, owner: str, client: Client) -> str:
     list_uri = None
-    response = client.request.get(f"{BSKY_API_URL}/xrpc/app.bsky.graph.getLists?actor={BSKY_HANDLE}")
+    response = client.request.get(f"https://public.api.bsky.app/xrpc/app.bsky.graph.getLists?actor={owner}")
     for l in response.content['lists']:
         if l['name'] == list_name:
             list_uri = l['uri']
@@ -26,12 +26,17 @@ def get_list_uri(list_name: str, client: Client) -> str:
     return list_uri
 
 def backup_list(list_uri: str, file: str, client: Client):
-    bskylist = client.app.bsky.graph.get_list(
-        models.AppBskyGraphGetList.Params(list=list_uri)
-    )
+    cursor = None
     with open(file, 'w', encoding='utf-8') as f:
-        for entry in bskylist.items:
-            f.write(entry.subject.did + '\n')
+        while True:
+            bskylist = client.app.bsky.graph.get_list(
+                models.AppBskyGraphGetList.Params(list=list_uri)
+            )
+            cursor = bskylist.cursor
+            for entry in bskylist.items:
+                f.write(entry.subject.did + '\n')
+            if cursor is None:
+                break
 
 
 def main():
