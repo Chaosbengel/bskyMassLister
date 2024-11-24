@@ -37,15 +37,22 @@ location of your choice
 Usage
 --------------------------------
 
-There are just two commands yet:
 
 Adding a file to a Bsky-list:
 
     python3 bskylisttool.py list add <target_list_name> <file>
 
-Download any Bsky list to a file:
+Fetch any Bsky list to a file:
 
-    python3 bskylisttool.py list download <list_owner_handle> <list_name> <output_file>
+    python3 bskylisttool.py fetch list <list_owner_handle> <list_name> <output_file>
+
+Fetch all followers of a profile to a file:
+
+    python3 bskylisttool.py fetch followers <handle> <file>
+
+Fetch all likers of a post:
+
+    python3 bskylisttool.py fetch likes <post-url> <file>
 
 Be warned, whatever you specify as outfile, this script will overwrite it   
 without warning.
