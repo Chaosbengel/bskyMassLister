@@ -37,15 +37,22 @@ location of your choice
 Usage
 --------------------------------
 
-There are just two commands yet:
 
 Adding a file to a Bsky-list:
 
     python3 bskylisttool.py list add <target_list_name> <file>
 
-Download any Bsky list to a file:
+Fetch any Bsky list to a file:
 
-    python3 bskylisttool.py list download <list_owner_handle> <list_name> <output_file>
+    python3 bskylisttool.py fetch list <list_owner_handle> <list_name> <output_file>
+
+Fetch all followers of a profile to a file:
+
+    python3 bskylisttool.py fetch followers <handle> <file>
+
+Fetch all likers of a post:
+
+    python3 bskylisttool.py fetch likes <post-url> <file>
 
 Be warned, whatever you specify as outfile, this script will overwrite it   
 without warning.
@@ -56,10 +63,11 @@ Oh, and i don't know if this runs on windows. You can try out.
 Roadmap
 --------------------------------
 
-- Store request-auth token and use it instead of password if its valid.
-- Add a function do download a profiles followers to a textfile
-- Add a function to get the profiles of all likers of a post
-- Make this more 'userfriendly'
+- Refactor the code
+- Implement error handling
+- Implement status messages
+- Maybe interactive mode?
+- Build a GUI
 
 
 
