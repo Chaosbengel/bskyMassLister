@@ -41,12 +41,13 @@ def backup_list(list_uri: str, file: str, client: Client):
 
 def main():
     parser = ArgumentParser()
+    parser.add_argument("owner")
     parser.add_argument("list")
     parser.add_argument("file")
     args = parser.parse_args()
     client = Client()
     client.login(BSKY_HANDLE, BSKY_APP_PASS)
-    list_uri = get_list_uri(args.list, client)
+    list_uri = get_list_uri(args.list, args.owner, client)
     backup_list(list_uri, args.file, client)
 
 
