@@ -63,10 +63,11 @@ Oh, and i don't know if this runs on windows. You can try out.
 Roadmap
 --------------------------------
 
-- Store request-auth token and use it instead of password if its valid.
-- Add a function do download a profiles followers to a textfile
-- Add a function to get the profiles of all likers of a post
-- Make this more 'userfriendly'
+- Refactor the code
+- Implement error handling
+- Implement status messages
+- Maybe interactive mode?
+- Build a GUI
 
 
 
