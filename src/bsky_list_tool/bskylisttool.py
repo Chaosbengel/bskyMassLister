@@ -12,13 +12,15 @@ class ListNotFoundException(Exception):
 
 
 class BskyListTool:
-    def __init__(self, handle: str=None, password: str=None, file: Union[Path,str]=None):
-        if file is not Path:
-            file = Path(file)
+    def __init__(self, handle: str=None, password: str=None, cred_file: Union[Path,str]=None,
+                 token_file: Union[Path, str]=None):
+        token = self._read_token_from_file(token_file)
+        if cred_file is not Path:
+            cred_file = Path(cred_file)
         file_handle = None
         file_pw = None
-        if file.exists():
-           file_handle, file_pw =  self._parse_config_file(file)
+        if cred_file.exists():
+           file_handle, file_pw =  self._parse_config_file(cred_file)
         if handle is None:
             if file_handle is None:
                 raise ValueError('A bsky-handle was needed, but none was provided.')
@@ -27,10 +29,21 @@ class BskyListTool:
             if file_pw is None:
                 raise ValueError('An app password is needed, but none was provided')
             password = file_pw
+        self.token_file = token_file
         self.handle = handle
         self.client = Client()
         self.resolver = IdResolver()
-        self.client.login(handle, password)
+        if token is None:
+            self.client.login(handle, password)
+        else:
+            print('login with token')
+            self.client.login(session_string=token)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.save_token()
 
     @staticmethod
     def _parse_config_file(file: Path):
@@ -45,6 +58,21 @@ class BskyListTool:
             pass
         return handle, password
 
+    @staticmethod
+    def _read_token_from_file(file: Union[Path, str]) -> Union[str, None]:
+        if file is not Path:
+            file = Path(file)
+        if file.exists():
+            with open(file, 'r', encoding='utf-8') as f:
+                token = f.read()
+            return token
+        else:
+            return None
+
+    def save_token(self):
+        token = self.client.export_session_string()
+        with open(self.token_file, 'w', encoding='utf-8') as f:
+            f.write(token)
 
     def add_file_to_list(self, listname: str, file: Union[Path, str]) -> None:
         if file is not Path:
@@ -115,11 +143,11 @@ if __name__ == "__main__":
     download_p.add_argument('list_name')
     download_p.add_argument('file')
     args = p.parse_args()
-    tool = BskyListTool(file='./config')
-    match args.main_menu:
-        case 'list':
-            match args.operation:
-                case 'add':
-                    tool.add_file_to_list(args.target_list_name, args.file)
-                case 'download':
-                    tool.backup_list(args.list_name, args.owner, args.file)
+    with BskyListTool(cred_file='./config', token_file='./.bsky.token') as tool:
+        match args.main_menu:
+            case 'list':
+                match args.operation:
+                    case 'add':
+                        tool.add_file_to_list(args.target_list_name, args.file)
+                    case 'download':
+                        tool.backup_list(args.list_name, args.owner, args.file)
