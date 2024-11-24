@@ -5,6 +5,8 @@ from configparser import ConfigParser, NoOptionError
 from pathlib import Path
 from typing import Union
 
+
+
 class ListNotFoundException(Exception):
     def __init__(self, message):
         super().__init__(message)
@@ -121,6 +123,17 @@ class BskyListTool:
                 if cursor is None:
                     break
 
+    def get_likes(self, post_url: str, file: Union[Path, str]):
+        at_uri = self._link_to_at_uri(post_url)
+        cursor = None
+        with open(file, 'w', encoding='utf-8') as f:
+            while True:
+                response = self.client.get_likes(uri=at_uri, limit=100, cursor=cursor)
+                cursor = response.cursor
+                for like in response.likes:
+                    f.write(like.actor.did + '\n')
+                if cursor is None:
+                    break
 
     def _get_list_uri(self, listname: str, owner: str) -> str:
         response = self.client.app.bsky.graph.get_lists(
@@ -134,9 +147,13 @@ class BskyListTool:
             raise ListNotFoundException(f'List with name {listname} could not be found.')
         return uri
 
-
-
-
+    def _link_to_at_uri(self, link: str) -> str:
+        http_url = link.split('/')
+        profile = http_url[4]
+        rkey = http_url[6]
+        did = self.client.resolve_handle(profile).did
+        at_uri = f"at://{did}/app.bsky.feed.post/{rkey}"
+        return at_uri
 
 
 if __name__ == "__main__":
@@ -148,13 +165,19 @@ if __name__ == "__main__":
     add_p = list_subp.add_parser('add')
     add_p.add_argument('target_list_name')
     add_p.add_argument('file')
-    download_p = list_subp.add_parser('download')
-    download_p.add_argument('owner')
-    download_p.add_argument('list_name')
-    download_p.add_argument('file')
-    follower_p = list_subp.add_parser('followers')
+    fetch_p = subp.add_parser('fetch')
+    fetch_subp = fetch_p.add_subparsers(dest='operation')
+    f_list_p = fetch_subp.add_parser('list')
+    f_list_p.add_argument('owner')
+    f_list_p.add_argument('list_name')
+    f_list_p.add_argument('file')
+    follower_p = fetch_subp.add_parser('followers')
     follower_p.add_argument('handle')
     follower_p.add_argument('file')
+    f_likes_p = fetch_subp.add_parser('likes')
+    f_likes_p.add_argument('url')
+    f_likes_p.add_argument('file')
+
     args = p.parse_args()
     with BskyListTool(cred_file='./config', token_file='./.bsky.token') as tool:
         match args.main_menu:
@@ -166,3 +189,11 @@ if __name__ == "__main__":
                         tool.backup_list(args.list_name, args.owner, args.file)
                     case 'followers':
                         tool.get_followers(args.handle, args.file)
+            case 'fetch':
+                match args.operation:
+                    case 'list':
+                        tool.backup_list(args.list_name, args.owner, args.file)
+                    case 'followers':
+                        tool.get_followers(args.handle, args.file)
+                    case 'likes':
+                        tool.get_likes(args.url, args.file)
