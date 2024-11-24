@@ -1,4 +1,5 @@
 .idea
 *.list
 TODO
-
+config
+.token
