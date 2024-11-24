@@ -36,7 +36,6 @@ class BskyListTool:
         if token is None:
             self.client.login(handle, password)
         else:
-            print('login with token')
             self.client.login(session_string=token)
 
     def __enter__(self):
