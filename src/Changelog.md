@@ -7,6 +7,7 @@ Changelog
 
 - Add support for authentication token because SessionCreate-events are heavily  
   rate limited.
+-  Add function to fetch all followers of an account to a file
 
 0.0.1a
 ----------------
