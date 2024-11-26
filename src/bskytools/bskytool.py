@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from atproto_client import Client, models
 from atproto_client.exceptions import BadRequestError
 from configparser import ConfigParser, NoOptionError

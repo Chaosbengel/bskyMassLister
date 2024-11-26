@@ -1,5 +1,8 @@
-Bsky List Tools by Chaosbengel
+Bsky Tools by Chaosbengel
 ==============================
+
+Intro
+------------------------------
 
 Initially I wanted to create a short script that makes adding a list of   
 Bsky-handles to a Bsky list more easy and less cumbersome. Then,  
@@ -40,19 +43,19 @@ Usage
 
 Adding a file to a Bsky-list:
 
-    python3 bskylisttool.py list add <target_list_name> <file>
+    ./bskytools_cli.py list add <target_list_name> <file>
 
 Fetch any Bsky list to a file:
 
-    python3 bskylisttool.py fetch list <list_owner_handle> <list_name> <output_file>
+    ./bskylisttool.py fetch list <list_owner_handle> <list_name> <output_file>
 
 Fetch all followers of a profile to a file:
 
-    python3 bskylisttool.py fetch followers <handle> <file>
+    ./bskylisttool.py fetch followers <handle> <file>
 
 Fetch all likers of a post:
 
-    python3 bskylisttool.py fetch likes <post-url> <file>
+    ./bskylisttool.py fetch likes <post-url> <file>
 
 Be warned, whatever you specify as outfile, this script will overwrite it   
 without warning.
@@ -62,13 +65,18 @@ Oh, and i don't know if this runs on windows. You can try out.
 
 Roadmap
 --------------------------------
+Due to the annoying list bug, I will first implement functions
+to unsubscribe from lists that no longer exist(and thus removing their
+Blocks) (YAY!!!) and for list authors for removing the orphaned list
+records from your profile repository, thus removing the ghost-list 
+entirely.
 
+--------------------------------
 - Refactor the code
 - Implement error handling
 - Implement status messages
 - Maybe interactive mode?
 - Build a GUI
-
 
 
 

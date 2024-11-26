@@ -29,22 +29,25 @@ def init():
 
 
 def main(my_args):
-    with BskyListTool(cred_file='config', token_file='.bsky.token') as tool:
+    with BskyListTool(cred_file='bskytools/config', token_file='bskytools/.bsky.token') as tool:
         match my_args.main_menu:
             case 'list':
                 match my_args.operation:
                     case 'add':
                         tool.add_file_to_list(my_args.target_list_name, my_args.file)
                     case 'followers':
-                        tool.get_followers(my_args.handle, my_args.file)
+                        pass
             case 'fetch':
                 match my_args.operation:
                     case 'list':
-                        tool.backup_list(my_args.list_name, my_args.owner, my_args.file)
+                        entrys = tool.fetch_list(my_args.list_name, my_args.owner)
+                        tool.write_to_file(entrys, my_args.file)
                     case 'followers':
-                        tool.get_followers(my_args.handle, my_args.file)
+                        entrys = tool.fetch_followers(my_args.handle)
+                        tool.write_to_file(entrys, my_args.file)
                     case 'likes':
-                        tool.get_likes(my_args.url, my_args.file)
+                        entrys = tool.fetch_likes(my_args.url)
+                        tool.write_to_file(entrys, my_args.file)
 
 
 if __name__ == '__main__':
