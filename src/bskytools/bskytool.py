@@ -123,9 +123,9 @@ class BskyListTool:
         cursor = None
         followers = []
         while True:
-            followers = self.client.get_followers(actor=handle, limit=100, cursor=cursor)
-            cursor = followers.cursor
-            for follower in followers.followers:
+            response = self.client.get_followers(actor=handle, limit=100, cursor=cursor)
+            cursor = response.cursor
+            for follower in response.followers:
                 followers.append(follower.did)
             if cursor is None:
                 break
