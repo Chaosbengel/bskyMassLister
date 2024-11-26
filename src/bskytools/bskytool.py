@@ -179,7 +179,7 @@ class BskyListTool:
                 if not userinput.startswith('y'):
                     print("Nothing was written.")
                     return
-                with open(file, 'w', encoding='utf-8') as f:
-                    for elem in collection:
-                        f.write(elem + '\n')
-                print("Saved to disk.")
+            with open(file, 'w', encoding='utf-8') as f:
+                for elem in collection:
+                    f.write(elem + '\n')
+            print("Saved to disk.")
