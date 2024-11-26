@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-from atproto import Client, IdResolver, models
+from atproto_client import Client, models
+from atproto_client.exceptions import BadRequestError
 from configparser import ConfigParser, NoOptionError
 from pathlib import Path
 from typing import Union, Iterable
 
-from atproto_client.exceptions import BadRequestError
 
 
 class ListNotFoundException(Exception):
@@ -35,7 +35,6 @@ class BskyListTool:
         self.token_file = token_file
         self.handle = handle
         self.client = Client()
-        self.resolver = IdResolver()
         if token is None:
             self.client.login(handle, password)
         else:
@@ -71,6 +70,7 @@ class BskyListTool:
         else:
             return None
 
+
     def save_token(self):
         token = self.client.export_session_string()
         with open(self.token_file, 'w', encoding='utf-8') as f:
@@ -105,7 +105,7 @@ class BskyListTool:
                         line = line[1::]
                     if not line.startswith('did:'):
                         try:
-                            line = self.resolver.handle.resolve(line)
+                            line = self.client.resolve_handle(line)
                         except BadRequestError as e:
                             if e.response.content.message == "Unable to resolve handle":
                                 print(f"could not resolve handle {line}, skipping..")
@@ -115,44 +115,46 @@ class BskyListTool:
                     dids.append(line)
         return dids
 
-
-
-    def backup_list(self, listname: str, owner: str, file: Path):
+    def fetch_list(self, listname: str, owner: str):
         uri = self._get_list_uri(listname, owner)
         cursor = None
-        with open(file, 'w', encoding='utf-8') as f:
-            while True:
-                bskylist = self.client.app.bsky.graph.get_list(
-                    models.AppBskyGraphGetList.Params(list=uri, limit=100, cursor=cursor)
-                )
-                cursor = bskylist.cursor
-                for entry in bskylist.items:
-                    f.write(entry.subject.did + '\n')
-                if cursor is None:
-                    break
+        dids = []
+        while True:
+            bskylist = self.client.app.bsky.graph.get_list(
+                models.AppBskyGraphGetList.Params(list=uri, limit=100, cursor=cursor)
+            )
+            cursor = bskylist.cursor
+            for entry in bskylist.items:
+                dids.append(entry.subject.did)
+            if cursor is None:
+                break
+            return dids
 
-    def get_followers(self, handle: str, file: Union[Path, str]):
+    def fetch_followers(self, handle: str):
         cursor = None
-        with open(file, 'w', encoding='utf-8') as f:
-            while True:
-                followers = self.client.get_followers(actor=handle, limit=100, cursor=cursor)
-                cursor = followers.cursor
-                for follower in followers.followers:
-                    f.write(follower.did + '\n')
-                if cursor is None:
-                    break
+        followers = []
+        while True:
+            followers = self.client.get_followers(actor=handle, limit=100, cursor=cursor)
+            cursor = followers.cursor
+            for follower in followers.followers:
+                followers.append(follower.did)
+            if cursor is None:
+                break
+        return followers
 
-    def get_likes(self, post_url: str, file: Union[Path, str]):
+    def fetch_likes(self, post_url: str):
         at_uri = self._link_to_at_uri(post_url)
         cursor = None
-        with open(file, 'w', encoding='utf-8') as f:
-            while True:
-                response = self.client.get_likes(uri=at_uri, limit=100, cursor=cursor)
-                cursor = response.cursor
-                for like in response.likes:
-                    f.write(like.actor.did + '\n')
-                if cursor is None:
-                    break
+        dids = []
+        while True:
+            response = self.client.get_likes(uri=at_uri, limit=100, cursor=cursor)
+            cursor = response.cursor
+            for like in response.likes:
+                dids.append(like.actor.did)
+            if cursor is None:
+                break
+        return dids
+
 
     def _get_list_uri(self, listname: str, owner: str) -> str:
         response = self.client.app.bsky.graph.get_lists(
@@ -174,43 +176,17 @@ class BskyListTool:
         at_uri = f"at://{did}/app.bsky.feed.post/{rkey}"
         return at_uri
 
-
-if __name__ == "__main__":
-    from argparse import ArgumentParser
-    p = ArgumentParser()
-    subp = p.add_subparsers(dest='main_menu', required=True)
-    list_parser = subp.add_parser('list')
-    list_subp = list_parser.add_subparsers(dest='operation', required=True)
-    add_p = list_subp.add_parser('add')
-    add_p.add_argument('target_list_name')
-    add_p.add_argument('file')
-    fetch_p = subp.add_parser('fetch')
-    fetch_subp = fetch_p.add_subparsers(dest='operation')
-    f_list_p = fetch_subp.add_parser('list')
-    f_list_p.add_argument('owner')
-    f_list_p.add_argument('list_name')
-    f_list_p.add_argument('file')
-    follower_p = fetch_subp.add_parser('followers')
-    follower_p.add_argument('handle')
-    follower_p.add_argument('file')
-    f_likes_p = fetch_subp.add_parser('likes')
-    f_likes_p.add_argument('url')
-    f_likes_p.add_argument('file')
-
-    args = p.parse_args()
-    with BskyListTool(cred_file='config', token_file='.bsky.token') as tool:
-        match args.main_menu:
-            case 'list':
-                match args.operation:
-                    case 'add':
-                        tool.add_file_to_list(args.target_list_name, args.file)
-                    case 'followers':
-                        tool.get_followers(args.handle, args.file)
-            case 'fetch':
-                match args.operation:
-                    case 'list':
-                        tool.backup_list(args.list_name, args.owner, args.file)
-                    case 'followers':
-                        tool.get_followers(args.handle, args.file)
-                    case 'likes':
-                        tool.get_likes(args.url, args.file)
+    @staticmethod
+    def write_to_file(collection: Iterable[str], file: Union[Path, str]):
+        if file is not Path:
+            file = Path(file)
+            if file.exists():
+                userinput = input(f"File {file} already exists. Do you want to overwrite? [Y|y]: ")
+                userinput = userinput.lower()
+                if not userinput.startswith('y'):
+                    print("Nothing was written.")
+                    return
+                with open(file, 'w', encoding='utf-8') as f:
+                    for elem in collection:
+                        f.write(elem + '\n')
+                print("Saved to disk.")
