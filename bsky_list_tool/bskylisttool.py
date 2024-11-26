@@ -3,8 +3,9 @@
 from atproto import Client, IdResolver, models
 from configparser import ConfigParser, NoOptionError
 from pathlib import Path
-from typing import Union
+from typing import Union, Iterable
 
+from atproto_client.exceptions import BadRequestError
 
 
 class ListNotFoundException(Exception):
@@ -75,12 +76,27 @@ class BskyListTool:
         with open(self.token_file, 'w', encoding='utf-8') as f:
             f.write(token)
 
-    def add_file_to_list(self, listname: str, file: Union[Path, str]) -> None:
-        if file is not Path:
-            file = Path(file)
-        if not file.exists():
-            raise FileNotFoundError(f'File {file} could not be found.')
+    def add_to_list(self, listname: str, subjects: Iterable[str]):
         uri = self._get_list_uri(listname, self.handle)
+        for subject in subjects:
+            if not subject.startswith('did:'):
+                subject = self.client.resolve_handle(subject)
+                self.client.app.bsky.graph.listitem.create(
+                    self.handle,
+                    models.AppBskyGraphListitem.Record(
+                        list=uri,
+                        subject=subject,
+                        created_at=self.client.get_current_time_iso()
+                    )
+                )
+
+    def add_file_to_list(self, listname: str, file: Union[Path, str]):
+        subjects = self.load_listfile(file)
+        self.add_to_list(listname, subjects)
+
+
+    def load_listfile(self, file: Union[Path, str]) -> list[str]:
+        dids = []
         with open(file, 'r', encoding='utf-8') as f:
             for line in f:
                 if line.strip():
@@ -88,15 +104,18 @@ class BskyListTool:
                     if line.startswith('@'):
                         line = line[1::]
                     if not line.startswith('did:'):
-                        line = self.resolver.handle.resolve(line)
-                    self.client.app.bsky.graph.listitem.create(
-                        self.handle,
-                        models.AppBskyGraphListitem.Record(
-                            list=uri,
-                            subject=line,
-                            created_at=self.client.get_current_time_iso()
-                        )
-                    )
+                        try:
+                            line = self.resolver.handle.resolve(line)
+                        except BadRequestError as e:
+                            if e.response.content.message == "Unable to resolve handle":
+                                print(f"could not resolve handle {line}, skipping..")
+                                continue
+                            else:
+                                raise
+                    dids.append(line)
+        return dids
+
+
 
     def backup_list(self, listname: str, owner: str, file: Path):
         uri = self._get_list_uri(listname, owner)
@@ -179,14 +198,12 @@ if __name__ == "__main__":
     f_likes_p.add_argument('file')
 
     args = p.parse_args()
-    with BskyListTool(cred_file='./config', token_file='./.bsky.token') as tool:
+    with BskyListTool(cred_file='config', token_file='.bsky.token') as tool:
         match args.main_menu:
             case 'list':
                 match args.operation:
                     case 'add':
                         tool.add_file_to_list(args.target_list_name, args.file)
-                    case 'download':
-                        tool.backup_list(args.list_name, args.owner, args.file)
                     case 'followers':
                         tool.get_followers(args.handle, args.file)
             case 'fetch':
