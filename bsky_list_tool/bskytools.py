@@ -7,11 +7,9 @@ from pathlib import Path
 from typing import Union, Iterable
 
 
-
 class ListNotFoundException(Exception):
     def __init__(self, message):
         super().__init__(message)
-
 
 
 class BskyListTool:
@@ -46,6 +44,26 @@ class BskyListTool:
     def __exit__(self, type, value, traceback):
         self.save_token()
 
+    def _get_list_uri(self, listname: str, owner: str) -> str:
+        response = self.client.app.bsky.graph.get_lists(
+            models.AppBskyGraphGetLists.Params(
+                actor=owner))
+        for l in response.lists:
+            if l['name'] == listname:
+                uri = l['uri']
+                break
+        else:
+            raise ListNotFoundException(f'List with name {listname} could not be found.')
+        return uri
+
+    def _link_to_at_uri(self, link: str) -> str:
+        http_url = link.split('/')
+        profile = http_url[4]
+        rkey = http_url[6]
+        did = self.client.resolve_handle(profile).did
+        at_uri = f"at://{did}/app.bsky.feed.post/{rkey}"
+        return at_uri
+
     @staticmethod
     def _parse_config_file(file: Path):
         config = ConfigParser()
@@ -70,11 +88,9 @@ class BskyListTool:
         else:
             return None
 
-
-    def save_token(self):
-        token = self.client.export_session_string()
-        with open(self.token_file, 'w', encoding='utf-8') as f:
-            f.write(token)
+    def add_file_to_list(self, listname: str, file: Union[Path, str]):
+        subjects = self.load_listfile(file)
+        self.add_to_list(listname, subjects)
 
     def add_to_list(self, listname: str, subjects: Iterable[str]):
         uri = self._get_list_uri(listname, self.handle)
@@ -89,31 +105,6 @@ class BskyListTool:
                         created_at=self.client.get_current_time_iso()
                     )
                 )
-
-    def add_file_to_list(self, listname: str, file: Union[Path, str]):
-        subjects = self.load_listfile(file)
-        self.add_to_list(listname, subjects)
-
-
-    def load_listfile(self, file: Union[Path, str]) -> list[str]:
-        dids = []
-        with open(file, 'r', encoding='utf-8') as f:
-            for line in f:
-                if line.strip():
-                    line = line.rstrip()
-                    if line.startswith('@'):
-                        line = line[1::]
-                    if not line.startswith('did:'):
-                        try:
-                            line = self.client.resolve_handle(line)
-                        except BadRequestError as e:
-                            if e.response.content.message == "Unable to resolve handle":
-                                print(f"could not resolve handle {line}, skipping..")
-                                continue
-                            else:
-                                raise
-                    dids.append(line)
-        return dids
 
     def fetch_list(self, listname: str, owner: str):
         uri = self._get_list_uri(listname, owner)
@@ -155,26 +146,30 @@ class BskyListTool:
                 break
         return dids
 
+    def load_listfile(self, file: Union[Path, str]) -> list[str]:
+        dids = []
+        with open(file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    line = line.rstrip()
+                    if line.startswith('@'):
+                        line = line[1::]
+                    if not line.startswith('did:'):
+                        try:
+                            line = self.client.resolve_handle(line)
+                        except BadRequestError as e:
+                            if e.response.content.message == "Unable to resolve handle":
+                                print(f"could not resolve handle {line}, skipping..")
+                                continue
+                            else:
+                                raise
+                    dids.append(line)
+        return dids
 
-    def _get_list_uri(self, listname: str, owner: str) -> str:
-        response = self.client.app.bsky.graph.get_lists(
-            models.AppBskyGraphGetLists.Params(
-                actor=owner))
-        for l in response.lists:
-            if l['name'] == listname:
-                uri = l['uri']
-                break
-        else:
-            raise ListNotFoundException(f'List with name {listname} could not be found.')
-        return uri
-
-    def _link_to_at_uri(self, link: str) -> str:
-        http_url = link.split('/')
-        profile = http_url[4]
-        rkey = http_url[6]
-        did = self.client.resolve_handle(profile).did
-        at_uri = f"at://{did}/app.bsky.feed.post/{rkey}"
-        return at_uri
+    def save_token(self):
+        token = self.client.export_session_string()
+        with open(self.token_file, 'w', encoding='utf-8') as f:
+            f.write(token)
 
     @staticmethod
     def write_to_file(collection: Iterable[str], file: Union[Path, str]):

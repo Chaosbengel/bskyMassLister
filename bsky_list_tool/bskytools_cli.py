@@ -1,24 +1,8 @@
+#!/usr/bin/env python3
 
 from bskytools import BskyListTool
 from argparse import ArgumentParser
 
-
-with BskyListTool(cred_file='config', token_file='.bsky.token') as tool:
-    match args.main_menu:
-        case 'list':
-            match args.operation:
-                case 'add':
-                    tool.add_file_to_list(args.target_list_name, args.file)
-                case 'followers':
-                    tool.get_followers(args.handle, args.file)
-        case 'fetch':
-            match args.operation:
-                case 'list':
-                    tool.backup_list(args.list_name, args.owner, args.file)
-                case 'followers':
-                    tool.get_followers(args.handle, args.file)
-                case 'likes':
-                    tool.get_likes(args.url, args.file)
 
 def init():
     p = ArgumentParser()
@@ -40,12 +24,29 @@ def init():
     f_likes_p = fetch_subp.add_parser('likes')
     f_likes_p.add_argument('url')
     f_likes_p.add_argument('file')
+    my_args = p.parse_args()
+    return my_args
 
-    args = p.parse_args()
 
-def main():
-    pass
+def main(my_args):
+    with BskyListTool(cred_file='config', token_file='.bsky.token') as tool:
+        match my_args.main_menu:
+            case 'list':
+                match my_args.operation:
+                    case 'add':
+                        tool.add_file_to_list(my_args.target_list_name, my_args.file)
+                    case 'followers':
+                        tool.get_followers(my_args.handle, my_args.file)
+            case 'fetch':
+                match my_args.operation:
+                    case 'list':
+                        tool.backup_list(my_args.list_name, my_args.owner, my_args.file)
+                    case 'followers':
+                        tool.get_followers(my_args.handle, my_args.file)
+                    case 'likes':
+                        tool.get_likes(my_args.url, my_args.file)
+
 
 if __name__ == '__main__':
-    init()
-    main()
+    my_args = init()
+    main(my_args)
